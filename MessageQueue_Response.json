@@ -1,0 +1,40 @@
+﻿{
+	"CartHeader":{
+		"CartHeaderId":6,
+		"UserId":"32f413c2-357c-454b-8b60-8cbbd0fee6ae",
+		"CouponCode":null,
+		"Discount":0.0,
+		"CartTotal":15.0,
+		"FirstName":null,
+		"LastName":null,
+		"Phone":null,
+		"Email":"customer@gmail.com"},
+	"CartDetails":[
+	{
+		"CartDetailsId":12,
+		"CartHeaderId":6,
+		"CartHeader":
+		{
+			"CartHeaderId":6,
+			"UserId":"32f413c2-357c-454b-8b60-8cbbd0fee6ae",
+			"CouponCode":null,
+			"Discount":0.0,
+			"CartTotal":0.0,
+			"FirstName":null,
+			"LastName":null,
+			"Phone":null,
+			"Email":null,
+		}
+		"ProductId":1,
+		"Product":
+		{
+			"Id":1,
+			"Name":"Samosa",
+			"Price":15.0,
+			"ImageUrl":"https://placehold.co/603x403",
+			"CategoryName":"Appetizer",
+			"Description":"India's best selling junk food",
+		}
+		"Count":1,
+	}]
+}
