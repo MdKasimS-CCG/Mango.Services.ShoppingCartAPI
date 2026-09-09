@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
+//TODO: establish network comms between containers.
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
