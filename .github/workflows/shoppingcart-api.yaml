@@ -3,7 +3,7 @@ name: Shopping Cart API CI/CD
 on:
   push:
     branches:
-      - 'feature/nesan-mango-shoppingcartAPI-*'
+      - 'feature/*'
 
   pull_request:
     branches:
