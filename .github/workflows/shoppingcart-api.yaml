@@ -75,7 +75,6 @@ jobs:
         
       # Build Docker image
       - name: Build Docker image
-        if: github.event_name == 'pull_request'
         run: |
           docker buildx build \
             --secret id=nugetconfig,src="$HOME/.nuget/NuGet/NuGet.Config" \
