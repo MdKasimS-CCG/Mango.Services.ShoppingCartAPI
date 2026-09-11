@@ -99,4 +99,4 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' 
         run: |
           docker push \
-            ghcr.io/mdkasims-ccg/mango-services-shoppingcartapi:pr-${{ github.event.pull_request.number }}
+            ghcr.io/mdkasims-ccg/mango-services-shoppingcartapi:${{ github.sha }}
