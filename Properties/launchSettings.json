@@ -34,13 +34,12 @@
       "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}/swagger",
       "environmentVariables": {
         "ASPNETCORE_HTTPS_PORT": "8081",
-        "ASPNETCORE_HTTP_PORTS": "8080",
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "ConnectionStrings__DefaultConnection": "Server=host.docker.internal,1433;Database=Mango_ShoppingCart;User Id=sa;Password=Admin@786_123;TrustServerCertificate=true;Encrypt=False"
+        "ASPNETCORE_HTTP_PORTS": "8080"
       },
       "publishAllPorts": false,
       "useSSL": false,
-      "httpPort": 5220
+      "httpPort": 5220,
+      "containerRunEnvironmentFiles": "D:\\Git\\MangoApplication\\Backend\\Mango.Services.ShoppingCartAPI\\.env"
     }
   },
   "$schema": "http://json.schemastore.org/launchsettings.json",
