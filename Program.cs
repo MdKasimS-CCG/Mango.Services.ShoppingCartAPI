@@ -9,13 +9,21 @@ using Mango.Services.ShoppingCartAPI.Service.IService;
 using Mango.Services.ShoppingCartAPI.Utility;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Microsoft.Extensions.Options;
 
 //TODO: establish network comms between containers.
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.Configure<ServiceUrlsOptions>(
+    builder.Configuration.GetSection("ServiceUrls"));
+
+builder.Services.Configure<ApiSettingsOptions>(
+    builder.Configuration.GetSection("ApiSettings"));
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -34,10 +42,25 @@ builder.Services.AddScoped<IMessageProducer, RabbitMQMessageProducer>();
 /// The other way is shown in Web project
 /// Later, BackednApiAuthentcaitionHttpClientHandler was added.
 /// May be to acheive this in simple way, this way Httpclient was configured
-builder.Services.AddHttpClient("Product", u=> u.BaseAddress =
-        new Uri(builder.Configuration["ServiceUrls:ProductAPI"])).AddHttpMessageHandler<BackendApiAuthenticationHttpClientHandler>();
-builder.Services.AddHttpClient("Coupon", u => u.BaseAddress =
-        new Uri(builder.Configuration["ServiceUrls:CouponAPI"])).AddHttpMessageHandler<BackendApiAuthenticationHttpClientHandler>();
+builder.Services.AddHttpClient("Product", (serviceProvider, client) =>
+{
+    var serviceUrls = serviceProvider
+        .GetRequiredService<IOptions<ServiceUrlsOptions>>()
+        .Value;
+
+    client.BaseAddress = new Uri(serviceUrls.ProductAPI);
+})
+.AddHttpMessageHandler<BackendApiAuthenticationHttpClientHandler>();
+
+builder.Services.AddHttpClient("Coupon", (serviceProvider, client) =>
+{
+    var serviceUrls = serviceProvider
+        .GetRequiredService<IOptions<ServiceUrlsOptions>>()
+        .Value;
+
+    client.BaseAddress = new Uri(serviceUrls.CouponAPI);
+})
+.AddHttpMessageHandler<BackendApiAuthenticationHttpClientHandler>();
 
 
 builder.Services.AddControllers();
@@ -68,7 +91,40 @@ builder.Services.AddSwaggerGen(option =>
 });
 
 //Adding Authentication
-builder.AddAppAuthentication();
+//builder.AddAppAuthentication();
+//builder.Services.AddAuthorization();
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme =
+            JwtBearerDefaults.AuthenticationScheme;
+
+        options.DefaultChallengeScheme =
+            JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        var settings = builder.Configuration
+            .GetSection("ApiSettings")
+            .Get<ApiSettingsOptions>()!;
+
+        var key = Encoding.ASCII.GetBytes(settings.Secret);
+
+        options.TokenValidationParameters =
+            new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey =
+                    new SymmetricSecurityKey(key),
+
+                ValidateIssuer = true,
+                ValidIssuer = settings.Issuer,
+
+                ValidateAudience = true,
+                ValidAudience = settings.Audience
+            };
+    });
+
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
@@ -102,4 +158,17 @@ void ApplyMigration()
             _db.Database.Migrate();
         }
     }
+}
+
+public class ServiceUrlsOptions
+{
+    public string ProductAPI { get; set; } = string.Empty;
+    public string CouponAPI { get; set; } = string.Empty;
+}
+
+public class ApiSettingsOptions
+{
+    public string Secret { get; set; } = string.Empty;
+    public string Issuer { get; set; } = string.Empty;
+    public string Audience { get; set; } = string.Empty;
 }
