@@ -243,6 +243,37 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
             return _response;
         }
 
+        [HttpPost("ClearCart/{userId}")]
+        public async Task<ResponseDto> ClearCart(string userId)
+        {
+            try
+            {
+                var cartHeader = await _db.CartHeaders
+                    .FirstOrDefaultAsync(u => u.UserId == userId);
+
+                if (cartHeader != null)
+                {
+                    var cartDetails = await _db.CartDetails
+                        .Where(u => u.CartHeaderId == cartHeader.CartHeaderId)
+                        .ToListAsync();
+
+                    _db.CartDetails.RemoveRange(cartDetails);
+                    _db.CartHeaders.Remove(cartHeader);
+
+                    await _db.SaveChangesAsync();
+                }
+
+                _response.Result = true;
+            }
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.Message = ex.Message;
+            }
+
+            return _response;
+        }
+
         [HttpPost("EmailCartRequest")]
         public async Task<ResponseDto> EmailCartRequest([FromBody] CartDto cartDto)
         {
