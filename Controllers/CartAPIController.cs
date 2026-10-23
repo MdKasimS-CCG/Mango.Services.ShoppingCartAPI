@@ -6,14 +6,17 @@ using Mango.Services.ShoppingCartAPI.Models;
 using Mango.Services.ShoppingCartAPI.Models.Dto;
 using Mango.Services.ShoppingCartAPI.Service.IService;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 using System.Reflection.PortableExecutable;
+using System.Security.Claims;
 
 namespace Mango.Services.ShoppingCartAPI.Controllers
 {
+    [Authorize]
     [Route("api/cart")]
     [ApiController]
     public class CartAPIController : ControllerBase
@@ -244,24 +247,33 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
         }
 
         [HttpPost("ClearCart/{userId}")]
-        public async Task<ResponseDto> ClearCart(string userId)
+        public async Task<ActionResult<ResponseDto>> ClearCart(string userId)
         {
+            // JwtBearer maps "sub" to ClaimTypes.NameIdentifier by default, so check both.
+            var callerId = User.FindFirstValue("sub")
+                           ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            // Destructive action: only the cart owner may clear their own cart.
+            if (string.IsNullOrWhiteSpace(callerId) || callerId != userId)
+            {
+                return Forbid();
+            }
+
             try
             {
-                var cartHeader = await _db.CartHeaders
-                    .FirstOrDefaultAsync(u => u.UserId == userId);
+                // ExecuteDeleteAsync runs immediately (outside SaveChanges),
+                // so wrap both deletes in a transaction to keep them atomic.
+                await using var transaction = await _db.Database.BeginTransactionAsync();
 
-                if (cartHeader != null)
-                {
-                    var cartDetails = await _db.CartDetails
-                        .Where(u => u.CartHeaderId == cartHeader.CartHeaderId)
-                        .ToListAsync();
+                await _db.CartDetails
+                    .Where(u => u.CartHeader.UserId == userId)
+                    .ExecuteDeleteAsync();
 
-                    _db.CartDetails.RemoveRange(cartDetails);
-                    _db.CartHeaders.Remove(cartHeader);
+                await _db.CartHeaders
+                    .Where(u => u.UserId == userId)
+                    .ExecuteDeleteAsync();
 
-                    await _db.SaveChangesAsync();
-                }
+                await transaction.CommitAsync();
 
                 _response.Result = true;
             }
