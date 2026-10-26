@@ -14,8 +14,8 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["Mango.Services.ShoppingCartAPI.csproj", "./"]
 RUN --mount=type=secret,id=nugetconfig \
-    dotnet restore "./Mango.Services.ShoppingCartAPI.csproj" \
-    --configfile /run/secrets/nugetconfig
+   dotnet restore "./Mango.Services.ShoppingCartAPI.csproj" \
+  --configfile /run/secrets/nugetconfig
 COPY . .
 RUN dotnet build "./Mango.Services.ShoppingCartAPI.csproj" -c $BUILD_CONFIGURATION -o /app/build
 

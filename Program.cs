@@ -119,7 +119,35 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<BackendApiAuthenticationHttpClientHandler>();
 builder.Services.AddScoped<ICouponService, CouponService>();
 // Note: Do remember, this is unlike tutor's Azure Service Bus. It uses RabbitMQ implementation in main branch itself.
-builder.Services.AddScoped<IMessageProducer, RabbitMQMessageProducer>();
+builder.Services
+    .AddOptions<RabbitMqSettings>()
+    .Bind(builder.Configuration.GetSection("MessageQueue:RabbitMQ"))
+    .Validate(
+        settings => !string.IsNullOrWhiteSpace(settings.HostName),
+        "RabbitMQ HostName is required.")
+    .Validate(
+        settings => settings.Port is >= 1 and <= 65535,
+        "RabbitMQ Port must be between 1 and 65535.")
+    .Validate(
+        settings => !string.IsNullOrWhiteSpace(settings.UserName),
+        "RabbitMQ UserName is required.")
+    .Validate(
+        settings => !string.IsNullOrWhiteSpace(settings.Password),
+        "RabbitMQ Password is required.")
+    .Validate(
+        settings => !string.IsNullOrWhiteSpace(settings.VirtualHost),
+        "RabbitMQ VirtualHost is required.")
+    .ValidateOnStart();
+
+builder.Services
+    .AddOptions<ShoppingCartQueueOptions>()
+    .Bind(builder.Configuration.GetSection("TopicAndQueueNames"))
+    .Validate(
+        options => !string.IsNullOrWhiteSpace(options.EmailShoppingCartQueue),
+        "TopicAndQueueNames:EmailShoppingCartQueue is required.")
+    .ValidateOnStart();
+
+builder.Services.AddSingleton<IMessageProducer, RabbitMQMessageProducer>();
 
 /// Another way to configure Httpclient service.
 /// The other way is shown in Web project
@@ -217,6 +245,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
@@ -252,3 +281,12 @@ public class MangoOptions
 
     public string EmailShoppingCartQueue { get; set; } = string.Empty;
 }
+
+public sealed class ShoppingCartQueueOptions
+{
+    public string EmailShoppingCartQueue { get; set; } = string.Empty;
+
+    // Owned by EmailAPI's consumer; must match its declaration of the queue.
+    public string EmailDeadLetterExchange { get; set; } = "email.dlx";
+}
+
