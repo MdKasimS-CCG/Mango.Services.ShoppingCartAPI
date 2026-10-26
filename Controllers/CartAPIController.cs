@@ -6,14 +6,18 @@ using Mango.Services.ShoppingCartAPI.Models;
 using Mango.Services.ShoppingCartAPI.Models.Dto;
 using Mango.Services.ShoppingCartAPI.Service.IService;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 using System.Reflection.PortableExecutable;
+using System.Security.Claims;
 
 namespace Mango.Services.ShoppingCartAPI.Controllers
 {
+    [Authorize]
     [Route("api/cart")]
     [ApiController]
     public class CartAPIController : ControllerBase
@@ -28,13 +32,15 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
         private IProductService _productService;
         private ICouponService _couponService;
         private IConfiguration _configuration;
+        private readonly ShoppingCartQueueOptions _queueSettings;
         private readonly ResponseDto _response;
 
         public CartAPIController(AppDbContext db, IMapper mapper
                                 , IProductService productService
                                 , ICouponService couponService
                                 , IMessageProducer messageBus
-                                , IConfiguration configuration)
+                                , IConfiguration configuration
+                                , IOptions<ShoppingCartQueueOptions> queueOptions)
         {
             _db = db;
             _mapper = mapper;
@@ -42,8 +48,8 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
             _productService = productService;
             _couponService = couponService;
             _configuration = configuration;
+            _queueSettings = queueOptions.Value;
             _response = new ResponseDto();
-            _configuration = configuration;
         }
 
         [HttpGet("GetCart/{userId}")]
@@ -243,12 +249,67 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
             return _response;
         }
 
+        [HttpPost("ClearCart/{userId}")]
+        public async Task<ActionResult<ResponseDto>> ClearCart(string userId)
+        {
+            // JwtBearer maps "sub" to ClaimTypes.NameIdentifier by default, so check both.
+            var callerId = User.FindFirstValue("sub")
+                           ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            // Destructive action: only the cart owner may clear their own cart.
+            if (string.IsNullOrWhiteSpace(callerId) || callerId != userId)
+            {
+                return Forbid();
+            }
+
+            try
+            {
+                // ExecuteDeleteAsync runs immediately (outside SaveChanges),
+                // so wrap both deletes in a transaction to keep them atomic.
+                await using var transaction = await _db.Database.BeginTransactionAsync();
+
+                await _db.CartDetails
+                    .Where(u => u.CartHeader.UserId == userId)
+                    .ExecuteDeleteAsync();
+
+                await _db.CartHeaders
+                    .Where(u => u.UserId == userId)
+                    .ExecuteDeleteAsync();
+
+                await transaction.CommitAsync();
+
+                _response.Result = true;
+            }
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.Message = ex.Message;
+            }
+
+            return _response;
+        }
+
         [HttpPost("EmailCartRequest")]
         public async Task<ResponseDto> EmailCartRequest([FromBody] CartDto cartDto)
         {
             try
             {
-                await _messageBus.SendMessage(cartDto, _configuration.GetValue<string>("TopicAndQueueNames:EmailShoppingCartQueue"));
+                var queueName = _queueSettings.EmailShoppingCartQueue;
+
+                // EmailAPI owns the dead-letter topology and declares this queue with
+                // these arguments; the declarations must match or RabbitMQ rejects
+                // the second one with PRECONDITION_FAILED (406).
+                var queueOptions = new RabbitMqQueueOptions
+                {
+                    Arguments = new Dictionary<string, object?>
+                    {
+                        ["x-dead-letter-exchange"] = _queueSettings.EmailDeadLetterExchange,
+                        ["x-dead-letter-routing-key"] = queueName
+                    }
+                };
+
+                await _messageBus.SendMessage(
+                    cartDto, queueName, Guid.NewGuid().ToString(), queueOptions);
                 _response.Result = true;
             }
             catch (Exception ex)

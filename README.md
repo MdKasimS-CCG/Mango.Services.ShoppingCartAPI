@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 <<<<<<< Updated upstream
 =======
+=======
+>>>>>>> 73698f3224fea037deb36646fe311049b691d2d2
 # Mango.Services.ShoppingCartAPI
 
 ShoppingCartAPI is the cart microservice in the Mango application. It exposes cart operations over HTTP, persists cart headers and cart items in SQL Server, and calls ProductAPI and CouponAPI to retrieve product and coupon information. It also uses the shared `Mango.MessageBus` package for publishing messages consumed by other services.
@@ -9,8 +12,11 @@ ShoppingCartAPI is the cart microservice in the Mango application. It exposes ca
 - [Overview](#overview)
 - [Technology](#technology)
 - [Architecture and integrations](#architecture-and-integrations)
+<<<<<<< HEAD
 - [Messaging with Mango.MessageBus 3.0.0](#messaging-with-mangomessagebus-300)
 - [Authentication and authorization](#authentication-and-authorization)
+=======
+>>>>>>> 73698f3224fea037deb36646fe311049b691d2d2
 - [Configuration](#configuration)
 - [Prerequisites](#prerequisites)
 - [Run locally](#run-locally)
@@ -28,10 +34,17 @@ The service manages a user's shopping cart and its associated line items. The re
 Implemented areas include:
 - Retrieve a cart by user.
 - Add or update cart items.
+<<<<<<< HEAD
 - Remove cart items, and clear a user's cart (authenticated, owner-only).
 - Apply coupon information to a cart using CouponAPI.
 - Retrieve product information using ProductAPI.
 - Publish cart-email requests through the shared `Mango.MessageBus` 3.0.0 package, with dead-letter handling owned by EmailAPI.
+=======
+- Remove cart items and clear cart data through cart operations.
+- Apply coupon information to a cart using CouponAPI.
+- Retrieve product information using ProductAPI.
+- Publish cart-related messages through the shared message-bus package.
+>>>>>>> 73698f3224fea037deb36646fe311049b691d2d2
 
 Refer to `Controllers/CartAPIController.cs` for the current route and action definitions.
 
@@ -41,8 +54,13 @@ Refer to `Controllers/CartAPIController.cs` for the current route and action def
 - Entity Framework Core and SQL Server
 - AutoMapper
 - HTTP clients for downstream services
+<<<<<<< HEAD
 - JWT bearer authentication for incoming requests, and bearer-token forwarding to downstream APIs
 - `Mango.MessageBus` 3.0.0 NuGet package, hosted in GitHub Packages (RabbitMQ publishing)
+=======
+- JWT bearer-token handling for downstream API calls
+- `Mango.MessageBus` NuGet package, hosted in GitHub Packages
+>>>>>>> 73698f3224fea037deb36646fe311049b691d2d2
 - Docker and GitHub Actions
 
 ## Architecture and integrations
@@ -62,6 +80,7 @@ ShoppingCartAPI ---- HTTP ----> ProductAPI
 
 The actual downstream URLs are environment-specific. In Docker Compose, use Compose service DNS names and the container's listening port, typically `http://mango-product:8080` and `http://mango-coupon:8080`, rather than `localhost`.
 
+<<<<<<< HEAD
 ## Messaging with Mango.MessageBus 3.0.0
 
 ShoppingCartAPI is a **producer only**. `POST api/cart/EmailCartRequest` publishes the posted cart to the `EmailShoppingCartQueue` queue, and EmailAPI consumes it. The `Mango.MessageBus` package supplies the producer; this service supplies the settings and the queue topology arguments.
@@ -125,6 +144,9 @@ All endpoints require a JWT bearer token (`[Authorize]` on the controller, with 
 `ClearCart/{userId}` is destructive and is additionally restricted to the owner. The `sub` claim (or `ClaimTypes.NameIdentifier`, because JwtBearer maps `sub`) must equal `userId`, otherwise the API returns 403. It removes the details and header with two `ExecuteDeleteAsync` calls inside one transaction.
 
 **Known gap:** the other cart endpoints (`GetCart`, `CartUpsert`, `RemoveCart`, coupon operations, `EmailCartRequest`) are authenticated but do not check ownership, so any signed-in user can act on another user's cart. This is tracked as a follow-up.
+=======
+**RabbitMQ configuration note:** the shared `Mango.MessageBus` implementation used by this solution has been observed to hardcode `localhost` in its producer. That means environment variables alone may not redirect the producer to an external RabbitMQ host when running inside a container. This is a known shared-package limitation and must be addressed in that package before relying on container-to-RabbitMQ publishing.
+>>>>>>> 73698f3224fea037deb36646fe311049b691d2d2
 
 ## Configuration
 
@@ -141,10 +163,14 @@ Typical configuration categories:
 | `Http__ConnectionStrings__DefaultConnection` | Local SQL Server connection string |
 | `Docker__ConnectionStrings__DefaultConnection` | SQL Server connection string for container execution |
 | HTTP/Docker ProductAPI and CouponAPI URL settings | Base URLs for downstream APIs; use Compose service names in Compose |
+<<<<<<< HEAD
 | `ApiSettings__Secret`, `__Issuer`, `__Audience` | JWT validation; must match AuthAPI |
 | `MessageQueue__RabbitMQ__HostName`, `__Port`, `__UserName`, `__Password`, `__VirtualHost` | RabbitMQ connection used by `Mango.MessageBus` (all required; validated at startup) |
 | `TopicAndQueueNames__EmailShoppingCartQueue` | Queue the cart email request is published to; required, must match EmailAPI |
 | `TopicAndQueueNames__EmailDeadLetterExchange` | Optional; defaults to `email.dlx`, must match EmailAPI |
+=======
+| HTTP/Docker RabbitMQ connection settings | Message broker settings used by the service/package |
+>>>>>>> 73698f3224fea037deb36646fe311049b691d2d2
 
 Environment variables use double underscores to represent nested .NET configuration keys. Use `.env.example` as the exact variable-name reference for this checkout.
 
@@ -153,10 +179,17 @@ For local development, a SQL Server connection string may use `localhost` when S
 ## Prerequisites
 
 - .NET 10 SDK
+<<<<<<< HEAD
 - Access to the private GitHub Packages feed containing `Mango.MessageBus` 3.0.0 (restores from the feed; no local package source is used)
 - SQL Server
 - ProductAPI and CouponAPI for end-to-end cart operations
 - RabbitMQ for message publishing, with EmailAPI declaring the matching queue topology
+=======
+- Access to the private GitHub Packages feed containing `Mango.MessageBus`
+- SQL Server
+- ProductAPI and CouponAPI for end-to-end cart operations
+- RabbitMQ for message publishing
+>>>>>>> 73698f3224fea037deb36646fe311049b691d2d2
 - Docker Desktop for container execution
 
 Configure a NuGet source with authorized read access to the GitHub Packages feed before restoring dependencies. Never commit a personal access token or authenticated NuGet configuration.
@@ -207,7 +240,10 @@ docker run --rm --name mango-shoppingcart \
 
 The example host port `5126` is a local mapping; the application listens on 8080 inside the container. Ensure container-mode database and downstream service URLs are configured for the container's network context.
 
+<<<<<<< HEAD
 >>>>>>> Stashed changes
+=======
+>>>>>>> 73698f3224fea037deb36646fe311049b691d2d2
 ## Setting up docker - using any terminal
 
 Building the image:-
@@ -215,8 +251,11 @@ docker build --secret id=nugetconfig,src="$env:NUGET_CONFIG_PATH" -t mango-shopp
 
 Running the container:-
 docker run --name mango-shoppingcartapi --env-file .env -p 5220:8080 mango-shoppingcartapi:local
+<<<<<<< HEAD
 <<<<<<< Updated upstream
 =======
+=======
+>>>>>>> 73698f3224fea037deb36646fe311049b691d2d2
 
 ## Run in the full Mango Compose stack
 
@@ -231,7 +270,11 @@ services:
       context: ./Backend/Mango.Services.ShoppingCartAPI
       dockerfile: Dockerfile
       secrets:
+<<<<<<< HEAD
         - nugetconfig
+=======
+        - nuget_config
+>>>>>>> 73698f3224fea037deb36646fe311049b691d2d2
     env_file:
       - ./Backend/Mango.Services.ShoppingCartAPI/.env
     environment:
@@ -239,11 +282,19 @@ services:
       # Set downstream URLs to Compose DNS names in the actual Compose file.
 ```
 
+<<<<<<< HEAD
 The root Compose file must declare the `nugetconfig` BuildKit secret and point it to an authorized NuGet.Config. Keep secret files out of source control.
 
 For full-stack networking:
 - Use Compose service names for Mango APIs, for example `mango-product` and `mango-coupon`.
 - Set `MessageQueue__RabbitMQ__HostName` to the RabbitMQ service name (or `host.docker.internal` for a broker outside the Compose network).
+=======
+The root Compose file must declare the `nuget_config` BuildKit secret and point it to an authorized NuGet.Config. Keep secret files out of source control.
+
+For full-stack networking:
+- Use Compose service names for Mango APIs, for example `mango-product` and `mango-coupon`.
+- Use `host.docker.internal` for SQL Server or RabbitMQ containers that are running separately from the Compose network, subject to the shared MessageBus producer limitation above.
+>>>>>>> 73698f3224fea037deb36646fe311049b691d2d2
 - Start dependencies before testing cart workflows.
 
 From the solution root:
@@ -269,6 +320,7 @@ The workflow currently logs that no automated test project exists and skips auto
 
 The API is implemented in `Controllers/CartAPIController.cs`. Consult that controller or the Swagger document for the exact route templates, HTTP verbs, request DTOs, and authorization requirements. Swagger is available in Development at `/swagger`.
 
+<<<<<<< HEAD
 All routes are under `api/cart` and require a bearer token.
 
 | Route | Purpose | Notes |
@@ -281,6 +333,16 @@ All routes are under `api/cart` and require a bearer token.
 | `POST EmailCartRequest` | Publish the cart to the email queue via `Mango.MessageBus` | Authenticated |
 
 Provide a valid token issued by AuthAPI when invoking these endpoints.
+=======
+| Area | Purpose |
+|---|---|
+| Cart retrieval | Fetch the current cart for a user |
+| Cart mutation | Add/update cart items and remove items |
+| Coupon | Apply or remove coupon data from a cart |
+| Cart messaging | Publish cart-related events/messages as implemented by the controller |
+
+The service uses bearer-token authentication for protected operations. Provide a valid token issued by the Mango authentication service when invoking protected endpoints.
+>>>>>>> 73698f3224fea037deb36646fe311049b691d2d2
 
 ## Troubleshooting
 
@@ -289,6 +351,7 @@ Provide a valid token issued by AuthAPI when invoking these endpoints.
 | `NU1101` / private package restore fails | Confirm NuGet.Config has authenticated read access to the GitHub Packages feed and that Docker BuildKit receives the `nugetconfig` secret. |
 | SQL Server connection fails in a container | Do not use `localhost` for a separate SQL Server container; use `host.docker.internal` and verify the host port is published. |
 | ProductAPI/CouponAPI calls fail in Compose | Use Compose service DNS names and the port exposed inside the target container, not host-mapped ports or `localhost`. |
+<<<<<<< HEAD
 | `EmailCartRequest` returns `isSuccess: false` with "could not declare queue" / `PRECONDITION_FAILED` (406) | The queue already exists with different arguments than the producer sends. Align `TopicAndQueueNames__EmailDeadLetterExchange` and the queue name with EmailAPI; on a dev broker delete the old queue so it is recreated. |
 | `EmailCartRequest` fails to connect to RabbitMQ | Check the `MessageQueue__RabbitMQ__*` settings; the connection opens on the first send. In a container, use the broker's Compose service name or `host.docker.internal`, not `localhost`. |
 | `NU1102`/restore cannot find `Mango.MessageBus` 3.0.0 | The package must be published to the GitHub Packages feed and the NuGet config must have read access. |
@@ -297,3 +360,8 @@ Provide a valid token issued by AuthAPI when invoking these endpoints.
 | Swagger is unavailable | Swagger middleware is enabled only in the Development environment. |
 | Database startup/migration fails | Verify the database exists, credentials are valid, and the configured login can apply migrations. |
 >>>>>>> Stashed changes
+=======
+| RabbitMQ connection attempts target `127.0.0.1` inside a container | The shared `Mango.MessageBus` producer currently hardcodes localhost. This is not fixed by changing only the service `.env`; update/configure the shared package and consume its updated version. |
+| Swagger is unavailable | Swagger middleware is enabled only in the Development environment. |
+| Database startup/migration fails | Verify the database exists, credentials are valid, and the configured login can apply migrations. |
+>>>>>>> 73698f3224fea037deb36646fe311049b691d2d2
