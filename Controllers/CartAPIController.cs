@@ -291,7 +291,22 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
         {
             try
             {
-                await _messageBus.SendMessage(cartDto, _configuration.GetValue<string>("TopicAndQueueNames:EmailShoppingCartQueue"));
+                var queueName = _configuration.GetValue<string>("TopicAndQueueNames:EmailShoppingCartQueue");
+
+                // EmailAPI owns the dead-letter topology and declares this queue with
+                // these arguments; the declarations must match or RabbitMQ rejects
+                // the second one with PRECONDITION_FAILED (406).
+                var queueOptions = new RabbitMqQueueOptions
+                {
+                    Arguments = new Dictionary<string, object?>
+                    {
+                        ["x-dead-letter-exchange"] = "email.dlx",
+                        ["x-dead-letter-routing-key"] = queueName
+                    }
+                };
+
+                await _messageBus.SendMessage(
+                    cartDto, queueName, Guid.NewGuid().ToString(), queueOptions);
                 _response.Result = true;
             }
             catch (Exception ex)
