@@ -285,5 +285,8 @@ public class MangoOptions
 public sealed class ShoppingCartQueueOptions
 {
     public string EmailShoppingCartQueue { get; set; } = string.Empty;
+
+    // Owned by EmailAPI's consumer; must match its declaration of the queue.
+    public string EmailDeadLetterExchange { get; set; } = "email.dlx";
 }
 

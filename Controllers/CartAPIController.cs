@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 using System.Reflection.PortableExecutable;
 using System.Security.Claims;
@@ -31,13 +32,15 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
         private IProductService _productService;
         private ICouponService _couponService;
         private IConfiguration _configuration;
+        private readonly ShoppingCartQueueOptions _queueSettings;
         private readonly ResponseDto _response;
 
         public CartAPIController(AppDbContext db, IMapper mapper
                                 , IProductService productService
                                 , ICouponService couponService
                                 , IMessageProducer messageBus
-                                , IConfiguration configuration)
+                                , IConfiguration configuration
+                                , IOptions<ShoppingCartQueueOptions> queueOptions)
         {
             _db = db;
             _mapper = mapper;
@@ -45,8 +48,8 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
             _productService = productService;
             _couponService = couponService;
             _configuration = configuration;
+            _queueSettings = queueOptions.Value;
             _response = new ResponseDto();
-            _configuration = configuration;
         }
 
         [HttpGet("GetCart/{userId}")]
@@ -291,7 +294,7 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
         {
             try
             {
-                var queueName = _configuration.GetValue<string>("TopicAndQueueNames:EmailShoppingCartQueue");
+                var queueName = _queueSettings.EmailShoppingCartQueue;
 
                 // EmailAPI owns the dead-letter topology and declares this queue with
                 // these arguments; the declarations must match or RabbitMQ rejects
@@ -300,7 +303,7 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
                 {
                     Arguments = new Dictionary<string, object?>
                     {
-                        ["x-dead-letter-exchange"] = "email.dlx",
+                        ["x-dead-letter-exchange"] = _queueSettings.EmailDeadLetterExchange,
                         ["x-dead-letter-routing-key"] = queueName
                     }
                 };
